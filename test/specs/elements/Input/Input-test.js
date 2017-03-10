@@ -120,7 +120,7 @@ describe('Input', () => {
 
         // account for overloading the onChange prop
         const expectedValue = propName === 'onChange'
-          ? wrapper.instance().handleTransitionChange
+          ? wrapper.instance().handleChange
           : propValue
 
         wrapper
@@ -138,7 +138,7 @@ describe('Input', () => {
 
         // account for overloading the onChange prop
         const expectedValue = propName === 'onChange'
-          ? wrapper.instance().handleTransitionChange
+          ? wrapper.instance().handleChange
           : propValue
 
         wrapper
