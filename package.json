@@ -142,6 +142,7 @@
   },
   "peerDependencies": {
     "react": ">=0.14.0 <= 15",
+    "react-addons-transition-group": ">=0.14.0 <= 15",
     "react-dom": ">=0.14.0 <= 15"
   }
 }
