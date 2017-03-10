@@ -18,6 +18,7 @@ export default class TransitionExampleExplorer extends Component {
 
   handleVisibilityUpdate = () => {
     const { visible } = this.state
+
     this.setState({ visible: !visible })
   }
 
