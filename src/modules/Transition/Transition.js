@@ -1,10 +1,13 @@
-import React from 'react';
-import ReactTransitionGroup from 'react-addons-transition-group';
+import React, { Component, PropTypes } from 'react'
+import ReactTransitionGroup from 'react-addons-transition-group'
 
 import { META } from '../../lib'
 import TransitionWrapper from './TransitionWrapper'
 
-export default class Transition extends React.Component {
+/**
+ * A transition is an animation usually used to move content in or out of view.
+ */
+export default class Transition extends Component {
   static propTypes = {
     /** Primary content. */
     children: PropTypes.node,

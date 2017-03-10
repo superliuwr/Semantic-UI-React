@@ -138,6 +138,9 @@ export { default as Sidebar } from './modules/Sidebar'
 export { default as SidebarPushable } from './modules/Sidebar/SidebarPushable'
 export { default as SidebarPusher } from './modules/Sidebar/SidebarPusher'
 
+export { default as Transition } from './modules/Transition'
+export { default as TransitionWrapper } from './modules/Transition/TransitionWrapper'
+
 // Views
 export { default as Advertisement } from './views/Advertisement'
 

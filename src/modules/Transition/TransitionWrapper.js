@@ -1,4 +1,4 @@
-import React, { Component } from 'react'
+import React, { Component, PropTypes } from 'react'
 import { makeDebugger, META } from '../../lib'
 
 const debug = makeDebugger('transition:wrapper')
