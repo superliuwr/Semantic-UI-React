@@ -10,11 +10,11 @@ const options = transitions.map(transition => ({ text: transition, value: transi
 
 export default class TransitionExampleExplorer extends Component {
   state = {
-    transition: 'scale',
+    animation: 'scale',
     visible: true,
   }
 
-  handleTransitionChange = (e, { value: transition }) => this.setState({ transition })
+  handleTransitionChange = (e, { value: animation }) => this.setState({ animation })
 
   handleVisibilityUpdate = () => {
     const { visible } = this.state
@@ -23,7 +23,7 @@ export default class TransitionExampleExplorer extends Component {
   }
 
   render() {
-    const { transition, visible } = this.state
+    const { animation, visible } = this.state
 
     return (
       <Grid columns={2}>
@@ -32,7 +32,7 @@ export default class TransitionExampleExplorer extends Component {
             label='Choose transition'
             onChange={this.handleTransitionChange}
             options={options}
-            value={transition}
+            value={animation}
           />
           <Form.Button
             content={visible ? 'Hide leaf' : 'Show leaf'}
@@ -42,8 +42,8 @@ export default class TransitionExampleExplorer extends Component {
         </Grid.Column>
 
         <Grid.Column>
-          <Transition>
-            <Image size='medium' src='http://semantic-ui.com/images/leaves/1.png' />
+          <Transition animation={animation}>
+            { visible && (<Image size='medium' src='http://semantic-ui.com/images/leaves/1.png' />) }
           </Transition>
         </Grid.Column>
       </Grid>

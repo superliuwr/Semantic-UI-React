@@ -192,6 +192,7 @@ if (__TEST__ || argv.localModules) {
     'anchor-js': 'AnchorJS',
     'babel-standalone': 'Babel',
     react: 'React',
+    'react-addons-transition-group': 'React.addons.TransitionGroup',
     'react-dom': 'ReactDOM',
     'react-dom/server': 'ReactDOMServer',
   })

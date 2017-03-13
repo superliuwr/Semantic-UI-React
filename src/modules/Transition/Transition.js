@@ -9,8 +9,16 @@ import TransitionWrapper from './TransitionWrapper'
  */
 export default class Transition extends Component {
   static propTypes = {
+    animation: PropTypes.string,
+
     /** Primary content. */
     children: PropTypes.node,
+
+    duration: PropTypes.number,
+  }
+
+  static defaultProps = {
+    duration: 500,
   }
 
   static _meta = {
@@ -24,7 +32,11 @@ export default class Transition extends Component {
     return childrenArray[0] || null
   }
 
-  wrapChild = child => <TransitionWrapper>{child}</TransitionWrapper>
+  wrapChild = child => {
+    const { animation, duration } = this.props
+
+    return <TransitionWrapper animation={animation} duration={duration}>{child}</TransitionWrapper>
+  }
 
   render() {
     return (
