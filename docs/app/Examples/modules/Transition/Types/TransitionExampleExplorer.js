@@ -42,7 +42,7 @@ export default class TransitionExampleExplorer extends Component {
         </Grid.Column>
 
         <Grid.Column>
-          <Transition animation={animation}>
+          <Transition animation={animation} duration={1500}>
             { visible && (<Image size='medium' src='http://semantic-ui.com/images/leaves/1.png' />) }
           </Transition>
         </Grid.Column>

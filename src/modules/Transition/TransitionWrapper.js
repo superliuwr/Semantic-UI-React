@@ -12,9 +12,9 @@ import {
 
 const debug = makeDebugger('transition')
 
-const STAGE_CALM = 0
-const STAGE_ANIMATION_IN = 1
-const STAGE_ANIMATION_OUT = 2
+const STAGE_CALM = 'STAGE_CALM'
+const STAGE_ANIMATION_IN = 'STAGE_ANIMATION_IN'
+const STAGE_ANIMATION_OUT = 'STAGE_ANIMATION_OUT'
 
 export default class TransitionWrapper extends Component {
   static propTypes = {
@@ -39,7 +39,7 @@ export default class TransitionWrapper extends Component {
   }
 
   componentWillUnmount() {
-    debug('componentWillMount()')
+    debug('componentWillUnmount()')
   }
 
   componentWillAppear = done => {
@@ -73,6 +73,10 @@ export default class TransitionWrapper extends Component {
     setTimeout(done, duration)
   }
 
+  componentWillReceiveProps = nextProps => {
+    debug('componentWillReceiveProps()', nextProps)
+  }
+
   componentDidLeave = () => {
     debug('componentDidLeave()')
   }
@@ -90,10 +94,10 @@ export default class TransitionWrapper extends Component {
   stopAnimation = () => this.setState({ stage: STAGE_CALM })
 
   render() {
-    debug('render()')
-
     const { children, className, duration } = this.props
     const { stage } = this.state
+
+    debug('render()', { stage })
 
     const animation = this.animationClass()
     const animating = stage === STAGE_ANIMATION_IN || stage === STAGE_ANIMATION_OUT
