@@ -42,6 +42,14 @@ See the [Documentation][2] for an introduction, usage information, and extensive
 
 ## [Documentation][2] :blue_book:
 
+
+## Examples & Tutorials
+
+This is a listing of example projects and guides that will help you integrate Semantic-UI-React into your new or existing projects.
+
+- [semantic-ui-react-todos](https://github.com/wyc/semantic-ui-react-todos): This example modifies the well-known [react-redux Todo List](https://github.com/reactjs/redux/tree/master/examples/todos) to use Semantic UI components. There is also a write-up on the process in the project README.
+
+
 ## Built With Semantic-UI-React
 
 These great products are built on Semantic-UI-React. Add yours [here][22].
@@ -157,7 +165,7 @@ Big thanks to our [contributors][20], especially:
 [2]: http://react.semantic-ui.com/
 [3]: https://facebook.github.io/react/
 [4]: https://github.com/Semantic-Org/Semantic-UI-React/labels/help%20wanted
-[5]: http://semantic-ui.com/
+[5]: https://semantic-ui.com/
 [6]: https://github.com/Semantic-Org/Semantic-UI-React/milestone/1
 [7]: https://github.com/webpack/webpack-dev-server/
 [8]: https://github.com/Semantic-Org/Semantic-UI-React/issues/243
