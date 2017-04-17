@@ -42,9 +42,17 @@ export default class TransitionExampleExplorer extends Component {
         </Grid.Column>
 
         <Grid.Column>
-          <Transition animation={animation} duration={1500}>
-            { visible && (<Image size='medium' src='http://semantic-ui.com/images/leaves/1.png' />) }
-          </Transition>
+          <Transition.Group timeout={1500}>
+            { visible && (
+              <Transition classNames='fade' timeout={1500}>
+                <Image
+                  size='medium'
+                  src='http://semantic-ui.com/images/leaves/1.png'
+                  style={{ animationDuration: '1.5s' }}
+                />
+              </Transition>
+            )}
+          </Transition.Group>
         </Grid.Column>
       </Grid>
     )
