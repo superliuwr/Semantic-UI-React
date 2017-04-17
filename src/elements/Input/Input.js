@@ -1,6 +1,7 @@
-import _ from 'lodash'
-import React, { Children, cloneElement, Component, PropTypes } from 'react'
 import cx from 'classnames'
+import _ from 'lodash'
+import PropTypes from 'prop-types'
+import React, { Children, cloneElement, Component } from 'react'
 
 import {
   createHTMLInput,
@@ -114,12 +115,25 @@ class Input extends Component {
     type: META.TYPES.ELEMENT,
   }
 
+  focus = () => (this.inputRef.focus())
+
   handleChange = (e) => {
     const { onChange } = this.props
     const value = _.get(e, 'target.value')
 
     onChange(e, { ...this.props, value })
   }
+
+  handleChildOverrides = (child, defaultProps) => ({
+    ...defaultProps,
+    ...child.props,
+    ref: c => {
+      _.invoke(child, 'ref', c)
+      this.handleInputRef(c)
+    },
+  })
+
+  handleInputRef = c => (this.inputRef = c)
 
   render() {
     const {
@@ -168,6 +182,7 @@ class Input extends Component {
     const [htmlInputProps, rest] = partitionHTMLInputProps({ ...unhandled, type })
 
     if (onChange) htmlInputProps.onChange = this.handleChange
+    htmlInputProps.ref = this.handleInputRef
 
     // tabIndex
     if (!_.isNil(tabIndex)) htmlInputProps.tabIndex = tabIndex
@@ -180,7 +195,7 @@ class Input extends Component {
       const childElements = _.map(Children.toArray(children), (child) => {
         if (child.type !== 'input') return child
 
-        return cloneElement(child, { ...htmlInputProps, ...child.props })
+        return cloneElement(child, this.handleChildOverrides(child, htmlInputProps))
       })
 
       return <ElementType {...rest} className={classes}>{childElements}</ElementType>
@@ -188,28 +203,22 @@ class Input extends Component {
 
     // Render Shorthand
     // ----------------------------------------
-    const actionElement = Button.create(action, elProps => ({
-      className: cx(
-        // all action components should have the button className
-        !_.includes(elProps.className, 'button') && 'button',
-      ),
-    }))
+    const actionElement = Button.create(action, { defaultProps: { className: 'button' } })
     const iconElement = Icon.create(icon)
-    const labelElement = Label.create(label, elProps => ({
+    const labelElement = Label.create(label, { defaultProps: {
       className: cx(
-        // all label components should have the label className
-        !_.includes(elProps.className, 'label') && 'label',
+        'label',
         // add 'left|right corner'
         _.includes(labelPosition, 'corner') && labelPosition,
       ),
-    }))
+    } })
 
     return (
       <ElementType {...rest} className={classes}>
         {actionPosition === 'left' && actionElement}
         {iconPosition === 'left' && iconElement}
         {labelPosition !== 'right' && labelElement}
-        {createHTMLInput(input || type, htmlInputProps)}
+        {createHTMLInput(input || type, { defaultProps: htmlInputProps })}
         {actionPosition !== 'left' && actionElement}
         {iconPosition !== 'left' && iconElement}
         {labelPosition === 'right' && labelElement}

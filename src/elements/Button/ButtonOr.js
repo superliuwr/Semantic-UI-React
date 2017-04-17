@@ -1,5 +1,6 @@
 import cx from 'classnames'
-import React, { PropTypes } from 'react'
+import PropTypes from 'prop-types'
+import React from 'react'
 
 import {
   customPropTypes,
@@ -34,10 +35,10 @@ ButtonOr.propTypes = {
   className: PropTypes.string,
 
   /** Or buttons can have their text localized, or adjusted by using the text prop. */
-  text: PropTypes.oneOfType(
+  text: PropTypes.oneOfType([
     PropTypes.number,
     PropTypes.string,
-  ),
+  ]),
 }
 
 export default ButtonOr
