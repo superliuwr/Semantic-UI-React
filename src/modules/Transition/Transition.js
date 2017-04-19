@@ -1,25 +1,58 @@
-import _ from 'lodash'
-import React from 'react'
 import addClass from 'dom-helpers/class/addClass'
 import removeClass from 'dom-helpers/class/removeClass'
 import raf from 'dom-helpers/util/requestAnimationFrame'
+import _ from 'lodash'
+import PropTypes from 'prop-types'
+import React, { Children } from 'react'
+import ReactDOM from 'react-dom'
 
 import { makeDebugger, META } from '../../lib'
 import TransitionGroup from './TransitionGroup'
-import TransitionWrapper from './TransitionWrapper'
 
 const debug = makeDebugger('Transition')
+
+export const UNMOUNTED = 0
+export const EXITED = 1
+export const ENTERING = 2
+export const ENTERED = 3
+export const EXITING = 4
 
 const TRANSITION_ENTER = 'enter'
 const TRANSITION_EXIT = 'exit'
 
 export default class Transition extends React.Component {
   static propTypes = {
-    onEnter: React.PropTypes.func,
-    onEntered: React.PropTypes.func,
+    /**
+     * Wait until the first "enter" transition to mount the component (add it to the DOM)
+     */
+    mountOnEnter: PropTypes.bool,
 
-    onExit: React.PropTypes.func,
-    onExited: React.PropTypes.func,
+    /**
+     * Unmount the component (remove it from the DOM) when it is not shown
+     */
+    unmountOnExit: PropTypes.bool,
+
+    /**
+     * Run the enter animation when the component mounts, if it is initially
+     * shown
+     */
+    transitionAppear: PropTypes.bool,
+
+    /**
+     * A Timeout for the animation, in milliseconds, to ensure that a node doesn't
+     * transition indefinately if the browser transitionEnd events are
+     * canceled or interrupted.
+     *
+     * By default this is set to a high number (5 seconds) as a failsafe. You should consider
+     * setting this to the duration of your animation (or a bit above it).
+     */
+    timeout: PropTypes.object,
+  }
+
+  static defaultProps = {
+    in: false,
+    unmountOnExit: true,
+    transitionAppear: false,
   }
 
   static _meta = {
@@ -29,15 +62,63 @@ export default class Transition extends React.Component {
 
   static Group = TransitionGroup
 
-  constructor(...args) {
-    super(...args)
+  constructor(props, context) {
+    super(props, context)
 
+    let initialStatus
+    this.nextStatus = null
+
+    if (props.in) {
+      if (props.transitionAppear) {
+        initialStatus = EXITED
+        this.nextStatus = ENTERING
+      } else {
+        initialStatus = ENTERED
+      }
+    } else {
+      if (props.unmountOnExit || props.mountOnEnter) {
+        initialStatus = UNMOUNTED
+      } else {
+        initialStatus = EXITED
+      }
+    }
+
+    this.state = { status: initialStatus }
+
+    this.nextCallback = null
     this.classNameAndNodeQueue = []
     this.transitionTimeouts = []
   }
 
+  componentDidMount() {
+    this.updateStatus(true)
+  }
+
+  componentWillReceiveProps(nextProps) {
+    const { status } = this.state
+
+    if (nextProps.in) {
+      if (status === UNMOUNTED) {
+        this.setState({ status: EXITED })
+      }
+      if (status !== ENTERING && status !== ENTERED) {
+        this.nextStatus = ENTERING
+      }
+    } else {
+      if (status === ENTERING || status === ENTERED) {
+        this.nextStatus = EXITING
+      }
+    }
+  }
+
+  componentDidUpdate() {
+    this.updateStatus()
+  }
+
   componentWillUnmount() {
     debug('componentWillUnmount()')
+
+    this.cancelNextCallback()
     this.unmounted = true
 
     if (this.timeout) clearTimeout(this.timeout)
@@ -45,14 +126,104 @@ export default class Transition extends React.Component {
     this.classNameAndNodeQueue.length = 0
   }
 
-  onTransitionStart(node, animationType) {
+  updateStatus(mounting = false) {
+    if (this.nextStatus !== null) {
+      // nextStatus will always be ENTERING or EXITING.
+      this.cancelNextCallback()
+      const node = ReactDOM.findDOMNode(this)
+
+      if (this.nextStatus === ENTERING) {
+        this.onEnter(node, mounting)
+
+        this.safeSetState({ status: ENTERING }, () => {
+          let { timeout } = this.props
+          if (typeof timeout !== 'number') {
+            timeout = mounting && timeout.appear != null ?
+              timeout.appear : timeout.enter
+          }
+
+          this.onTransitionEnd(node, timeout, () => {
+            this.safeSetState({ status: ENTERED }, () => {
+              this.onEntered(node)
+            })
+          })
+        })
+      } else {
+        this.onExit(node)
+
+        this.safeSetState({ status: EXITING }, () => {
+          let { timeout } = this.props
+          if (typeof timeout !== 'number') {
+            timeout = timeout.exit
+          }
+
+          this.onTransitionEnd(node, timeout, () => {
+            this.safeSetState({ status: EXITED }, () => {
+              this.onExited(node)
+            })
+          })
+        })
+      }
+
+      this.nextStatus = null
+    } else if (this.props.unmountOnExit && this.state.status === EXITED) {
+      this.setState({ status: UNMOUNTED })
+    }
+  }
+
+  cancelNextCallback() {
+    if (this.nextCallback !== null) {
+      this.nextCallback.cancel()
+      this.nextCallback = null
+    }
+  }
+
+  safeSetState(nextState, callback) {
+    // This shouldn't be necessary, but there are weird race conditions with
+    // setState callbacks and unmounting in testing, so always make sure that
+    // we can cancel any pending setState callbacks after we unmount.
+    this.setState(nextState, this.setNextCallback(callback))
+  }
+
+  setNextCallback(callback) {
+    let active = true
+
+    this.nextCallback = (event) => {
+      if (active) {
+        active = false
+        this.nextCallback = null
+
+        callback(event)
+      }
+    }
+
+    this.nextCallback.cancel = () => {
+      active = false
+    }
+
+    return this.nextCallback
+  }
+
+  onTransitionEnd(node, timeout, handler) {
+    this.setNextCallback(handler)
+
+    if (timeout == null) {
+      this.nextCallback()
+    } else if (node) {
+      setTimeout(this.nextCallback, timeout)
+    } else {
+      setTimeout(this.nextCallback, 0)
+    }
+  }
+
+  onTransitionItemStart(node, animationType) {
     const { className, activeClassName } = this.getClassNames(animationType)
 
     _.forEach(className, cx => addClass(node, cx))
     this.queueClassAndNode(activeClassName, node)
   }
 
-  onTransitionEnd(node, animationType) {
+  onTransitionItemEnd(node, animationType) {
     const { className, activeClassName } = this.getClassNames(animationType)
 
     _.forEach(className, cx => removeClass(node, cx))
@@ -60,29 +231,21 @@ export default class Transition extends React.Component {
   }
 
   onEnter = node => {
-    this.onTransitionEnd(node, TRANSITION_EXIT)
-    this.onTransitionStart(node, TRANSITION_ENTER)
-
-    if (this.props.onEnter) this.props.onEnter(node)
+    this.onTransitionItemEnd(node, TRANSITION_EXIT)
+    this.onTransitionItemStart(node, TRANSITION_ENTER)
   }
 
   onEntered = node => {
-    this.onTransitionEnd(node, TRANSITION_ENTER)
-
-    if (this.props.onEntered) this.props.onEntered(node)
+    this.onTransitionItemEnd(node, TRANSITION_ENTER)
   }
 
   onExit = node => {
-    this.onTransitionEnd(node, TRANSITION_ENTER)
-    this.onTransitionStart(node, TRANSITION_EXIT)
-
-    if (this.props.onExit) this.props.onExit(node)
+    this.onTransitionItemEnd(node, TRANSITION_ENTER)
+    this.onTransitionItemStart(node, TRANSITION_EXIT)
   }
 
   onExited = node => {
-    this.onTransitionEnd(node, TRANSITION_EXIT)
-
-    if (this.props.onExited) this.props.onExited(node)
+    this.onTransitionItemEnd(node, TRANSITION_EXIT)
   }
 
   getClassNames = type => {
@@ -126,17 +289,10 @@ export default class Transition extends React.Component {
   }
 
   render() {
-    debug('render()')
+    const { children } = this.props
+    const { status } = this.state
 
-    return (
-      <TransitionWrapper
-        {...this.props}
-        onEnter={this.onEnter}
-        onEntered={this.onEntered}
-        onExit={this.onExit}
-        onExited={this.onExited}
-        willTransition={this.transition}
-      />
-    )
+    if (status === UNMOUNTED) return null
+    return Children.only(children)
   }
 }
