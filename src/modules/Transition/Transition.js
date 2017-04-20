@@ -133,7 +133,8 @@ export default class Transition extends React.Component {
       const node = ReactDOM.findDOMNode(this)
 
       if (this.nextStatus === ENTERING) {
-        this.onEnter(node, mounting)
+        this.onTransitionItemEnd(node, TRANSITION_EXIT)
+        this.onTransitionItemStart(node, TRANSITION_ENTER)
 
         this.safeSetState({ status: ENTERING }, () => {
           let { timeout } = this.props
@@ -144,12 +145,13 @@ export default class Transition extends React.Component {
 
           this.onTransitionEnd(node, timeout, () => {
             this.safeSetState({ status: ENTERED }, () => {
-              this.onEntered(node)
+              this.onTransitionItemEnd(node, TRANSITION_ENTER)
             })
           })
         })
       } else {
-        this.onExit(node)
+        this.onTransitionItemEnd(node, TRANSITION_ENTER)
+        this.onTransitionItemStart(node, TRANSITION_EXIT)
 
         this.safeSetState({ status: EXITING }, () => {
           let { timeout } = this.props
@@ -159,7 +161,7 @@ export default class Transition extends React.Component {
 
           this.onTransitionEnd(node, timeout, () => {
             this.safeSetState({ status: EXITED }, () => {
-              this.onExited(node)
+              this.onTransitionItemEnd(node, TRANSITION_EXIT)
             })
           })
         })
@@ -228,24 +230,6 @@ export default class Transition extends React.Component {
 
     _.forEach(className, cx => removeClass(node, cx))
     _.forEach(activeClassName, cx => removeClass(node, cx))
-  }
-
-  onEnter = node => {
-    this.onTransitionItemEnd(node, TRANSITION_EXIT)
-    this.onTransitionItemStart(node, TRANSITION_ENTER)
-  }
-
-  onEntered = node => {
-    this.onTransitionItemEnd(node, TRANSITION_ENTER)
-  }
-
-  onExit = node => {
-    this.onTransitionItemEnd(node, TRANSITION_ENTER)
-    this.onTransitionItemStart(node, TRANSITION_EXIT)
-  }
-
-  onExited = node => {
-    this.onTransitionItemEnd(node, TRANSITION_EXIT)
   }
 
   getClassNames = type => {
