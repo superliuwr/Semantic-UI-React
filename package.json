@@ -89,7 +89,7 @@
     "enzyme": "^2.8.2",
     "eslint-config-ta": "^5.2.0",
     "eslint-plugin-jsx-a11y": "^4.0.0",
-    "express": "^4.13.4",
+    "express": "^4.15.3",
     "faker": "^4.1.0",
     "gh-pages": "^1.0.0",
     "gulp": "gulpjs/gulp#4.0",
