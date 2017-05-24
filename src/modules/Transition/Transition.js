@@ -1,12 +1,17 @@
 import addClass from 'dom-helpers/class/addClass'
 import removeClass from 'dom-helpers/class/removeClass'
 import raf from 'dom-helpers/util/requestAnimationFrame'
+import cx from 'classnames'
 import _ from 'lodash'
 import PropTypes from 'prop-types'
-import React, { Children } from 'react'
+import React, { Children, cloneElement } from 'react'
 import ReactDOM from 'react-dom'
 
-import { makeDebugger, META } from '../../lib'
+import {
+  makeDebugger,
+  META,
+  useKeyOnly
+} from '../../lib'
 import TransitionGroup from './TransitionGroup'
 
 const debug = makeDebugger('Transition')
@@ -93,6 +98,10 @@ export default class Transition extends React.Component {
   componentDidMount() {
     this.updateStatus(true)
   }
+
+  // ----------------------------------------
+  // Lifecycle
+  // ----------------------------------------
 
   componentWillReceiveProps(nextProps) {
     const { status } = this.state
@@ -272,11 +281,42 @@ export default class Transition extends React.Component {
     this.rafHandle = null
   }
 
+  // ----------------------------------------
+  // Helpers
+  // ----------------------------------------
+
+  computeClasses = () => {
+    const { status } = this.state
+    if(status === UNMOUNTED) return null
+
+    const { children, className } = this.props
+    const childClasses = _.get(children, 'props.className')
+
+    return cx(
+      childClasses,
+      useKeyOnly(ENTERING, 'in'),
+      useKeyOnly(EXITING, 'out'),
+      useKeyOnly(ENTERING || EXITING, 'animating transition visible'),
+      className,
+    )
+  }
+
+  // ----------------------------------------
+  // Render
+  // ----------------------------------------
+
   render() {
+    debug('render()')
+    debug('props', this.props)
+    debug('state', this.state)
+
     const { children } = this.props
     const { status } = this.state
 
     if (status === UNMOUNTED) return null
     return Children.only(children)
+    return cloneElement(children, {
+      className: this.computeClasses()
+    })
   }
 }

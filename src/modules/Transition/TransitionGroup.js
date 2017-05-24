@@ -1,9 +1,9 @@
+import _ from 'lodash'
+import PropTypes from 'prop-types'
 import React, { cloneElement, isValidElement } from 'react'
 
 import { getUnhandledProps, META } from '../../lib'
 import { getChildMapping, mergeChildMappings } from '../../lib/ChildMapping'
-
-const values = Object.values || (obj => Object.keys(obj).map(k => obj[k]))
 
 function normalizeTimeout(timeout) {
   if (typeof timeout === 'number') return timeout
@@ -13,13 +13,13 @@ function normalizeTimeout(timeout) {
 
 export default class TransitionGroup extends React.Component {
   static propTypes = {
-    component: React.PropTypes.any,
-    children: React.PropTypes.node,
-    timeout: React.PropTypes.any,
+    component: PropTypes.any,
+    children: PropTypes.node,
+    timeout: PropTypes.any,
   }
 
   static defaultProps = {
-    component: 'span',
+    component: 'div',
   }
 
   static _meta = {
@@ -110,6 +110,6 @@ export default class TransitionGroup extends React.Component {
     const { children } = this.state
     const rest = getUnhandledProps(TransitionGroup, this.props)
 
-    return <Component {...rest}>{values(children)}</Component>
+    return <Component {...rest}>{_.values(children)}</Component>
   }
 }
