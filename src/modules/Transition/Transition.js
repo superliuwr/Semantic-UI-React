@@ -1,13 +1,13 @@
 import cx from 'classnames'
 import _ from 'lodash'
 import PropTypes from 'prop-types'
-import React, { cloneElement, Component } from 'react'
+import { cloneElement, Component } from 'react'
 import ReactDOM from 'react-dom'
 
 import {
   makeDebugger,
   META,
-  useKeyOnly
+  useKeyOnly,
 } from '../../lib'
 import TransitionGroup from './TransitionGroup'
 
@@ -27,33 +27,41 @@ export default class Transition extends Component {
     /** Named animation event to used. Must be defined in CSS. */
     animation: PropTypes.string,
 
+    /** Primary content. */
+    children: PropTypes.node,
+
+    /** Additional classes. */
+    className: PropTypes.string,
+
     /** Duration of the CSS transition animation in microseconds. */
     duration: PropTypes.number,
 
     /** Wait until the first "enter" transition to mount the component (add it to the DOM). */
     mountOnEnter: PropTypes.bool,
 
-    /** Unmount the component (remove it from the DOM) when it is not shown. */
-    unmountOnExit: PropTypes.bool,
+    /** Show the component; triggers the enter or exit animation. */
+    into: PropTypes.bool,
 
     /**
-     * A Timeout for the animation, in milliseconds, to ensure that a node doesn't
-     * transition indefinately if the browser transitionEnd events are
-     * canceled or interrupted.
+     * A Timeout for the animation, in milliseconds, to ensure that a node doesn't transition indefinately if the
+     * browser transitionEnd events are canceled or interrupted.
      *
-     * By default this is set to a high number (5 seconds) as a failsafe. You should consider
-     * setting this to the duration of your animation (or a bit above it).
+     * By default this is set to a high number (5 seconds) as a failsafe. You should consider setting this to
+     * the duration of your animation (or a bit above it).
      */
     timeout: PropTypes.object,
 
     /** Run the enter animation when the component mounts, if it is initially shown. */
     transitionAppear: PropTypes.bool,
+
+    /** Unmount the component (remove it from the DOM) when it is not shown. */
+    unmountOnExit: PropTypes.bool,
   }
 
   static defaultProps = {
     animation: 'fade',
     duration: 500,
-    in: false,
+    into: false,
     unmountOnExit: true,
     transitionAppear: false,
   }
@@ -65,32 +73,12 @@ export default class Transition extends Component {
 
   static Group = TransitionGroup
 
-  constructor(props, context) {
-    super(props, context)
+  constructor(...args) {
+    super(...args)
 
-    let initialStatus
-    this.nextStatus = null
-
-    if (props.in) {
-      if (props.transitionAppear) {
-        initialStatus = EXITED
-        this.nextStatus = ENTERING
-      } else {
-        initialStatus = ENTERED
-      }
-    } else {
-      if (props.unmountOnExit || props.mountOnEnter) {
-        initialStatus = UNMOUNTED
-      } else {
-        initialStatus = EXITED
-      }
-    }
-
-    this.state = { status: initialStatus }
-
-    this.nextCallback = null
-    this.classNameAndNodeQueue = []
-    this.transitionTimeouts = []
+    const { initial: status, next } = this.computeInitialStatuses()
+    this.nextStatus = next
+    this.state = { status }
   }
 
   // ----------------------------------------
@@ -104,7 +92,7 @@ export default class Transition extends Component {
   componentWillReceiveProps(nextProps) {
     const { status } = this.state
 
-    if (nextProps.in) {
+    if (nextProps.into) {
       if (status === UNMOUNTED) {
         this.setState({ status: EXITED })
       }
@@ -126,11 +114,6 @@ export default class Transition extends Component {
     debug('componentWillUnmount()')
 
     this.cancelNextCallback()
-    this.unmounted = true
-
-    if (this.timeout) clearTimeout(this.timeout)
-    this.transitionTimeouts.forEach(timeout => clearTimeout(timeout))
-    this.classNameAndNodeQueue.length = 0
   }
 
   updateStatus(mounting = false) {
@@ -171,18 +154,17 @@ export default class Transition extends Component {
   }
 
   cancelNextCallback() {
-    if (this.nextCallback !== null) {
-      this.nextCallback.cancel()
-      this.nextCallback = null
-    }
+    if (!this.nextCallback) return
+
+    this.nextCallback.cancel()
+    this.nextCallback = null
   }
 
   safeSetState(nextState, callback) {
     // This shouldn't be necessary, but there are weird race conditions with
     // setState callbacks and unmounting in testing, so always make sure that
     // we can cancel any pending setState callbacks after we unmount.
-    if(!callback) return this.setState(nextState)
-    this.setState(nextState, this.setNextCallback(callback))
+    this.setState(nextState, callback && this.setNextCallback(callback))
   }
 
   setNextCallback(callback) {
@@ -222,7 +204,7 @@ export default class Transition extends Component {
 
   computeClasses = () => {
     const { status } = this.state
-    if(status === UNMOUNTED) return null
+    if (status === UNMOUNTED) return null
 
     const { animation, children, className } = this.props
     const childClasses = _.get(children, 'props.className')
@@ -235,6 +217,23 @@ export default class Transition extends Component {
       useKeyOnly(status === ENTERING || status === EXITING, animation),
       className,
     )
+  }
+
+  computeInitialStatuses = () => {
+    const { into, mountOnEnter, transitionAppear, unmountOnExit } = this.props
+
+    if (into) {
+      if (transitionAppear) {
+        return {
+          initial: EXITED,
+          next: ENTERING,
+        }
+      }
+      return { initial: ENTERED }
+    }
+
+    if (mountOnEnter || unmountOnExit) return { initial: UNMOUNTED }
+    return { initial: EXITED }
   }
 
   // ----------------------------------------
@@ -251,7 +250,7 @@ export default class Transition extends Component {
 
     if (status === UNMOUNTED) return null
     return cloneElement(children, {
-      className: this.computeClasses()
+      className: this.computeClasses(),
     })
   }
 }

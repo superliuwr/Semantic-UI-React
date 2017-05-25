@@ -34,7 +34,7 @@ export default class TransitionGroup extends React.Component {
     const mapping = getChildMapping(children, child => {
       return cloneElement(child, {
         timeout,
-        in: true,
+        into: true,
         transitionAppear: timeout.appear !== null,
         onExited: () => this.handleExited(child.key),
       })
@@ -61,14 +61,14 @@ export default class TransitionGroup extends React.Component {
       const hasNext = key in nextChildMapping
 
       const prevChild = prevChildMapping[key]
-      const isLeaving = isValidElement(prevChild) && !prevChild.props.in
+      const isLeaving = isValidElement(prevChild) && !prevChild.props.into
 
       // item is new (entering)
       if (hasNext && (!hasPrev || isLeaving)) {
         // console.log('entering', key)
         children[key] = cloneElement(child, {
           onExited,
-          in: true,
+          into: true,
           transitionAppear: true,
           timeout: normalizeTimeout(timeout),
         })
@@ -76,7 +76,7 @@ export default class TransitionGroup extends React.Component {
       // item is old (exiting)
       else if (!hasNext && hasPrev && !isLeaving) {
         // console.log('leaving', key)
-        children[key] = cloneElement(child, { in: false, timeout })
+        children[key] = cloneElement(child, { into: false, timeout })
       }
       // item hasn't changed transition states
       // copy over the last transition props;
@@ -84,7 +84,7 @@ export default class TransitionGroup extends React.Component {
         // console.log('unchanged', key)
         children[key] = cloneElement(child, {
           onExited,
-          in: prevChild.props.in,
+          into: prevChild.props.into,
           transitionAppear: prevChild.props.transitionAppear,
         })
       }
