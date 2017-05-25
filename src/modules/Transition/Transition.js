@@ -1,10 +1,7 @@
-import addClass from 'dom-helpers/class/addClass'
-import removeClass from 'dom-helpers/class/removeClass'
-import raf from 'dom-helpers/util/requestAnimationFrame'
 import cx from 'classnames'
 import _ from 'lodash'
 import PropTypes from 'prop-types'
-import React, { Children, cloneElement } from 'react'
+import React, { cloneElement, Component } from 'react'
 import ReactDOM from 'react-dom'
 
 import {
@@ -16,32 +13,28 @@ import TransitionGroup from './TransitionGroup'
 
 const debug = makeDebugger('Transition')
 
-export const UNMOUNTED = 0
-export const EXITED = 1
-export const ENTERING = 2
-export const ENTERED = 3
-export const EXITING = 4
+export const UNMOUNTED = 'UNMOUNTED'
+export const EXITED = 'EXITED'
+export const ENTERING = 'ENTERING'
+export const ENTERED = 'ENTERED'
+export const EXITING = 'EXITING'
 
-const TRANSITION_ENTER = 'enter'
-const TRANSITION_EXIT = 'exit'
-
-export default class Transition extends React.Component {
+/**
+ * A transition is an animation usually used to move content in or out of view.
+ */
+export default class Transition extends Component {
   static propTypes = {
-    /**
-     * Wait until the first "enter" transition to mount the component (add it to the DOM)
-     */
+    /** Named animation event to used. Must be defined in CSS. */
+    animation: PropTypes.string,
+
+    /** Duration of the CSS transition animation in microseconds. */
+    duration: PropTypes.number,
+
+    /** Wait until the first "enter" transition to mount the component (add it to the DOM). */
     mountOnEnter: PropTypes.bool,
 
-    /**
-     * Unmount the component (remove it from the DOM) when it is not shown
-     */
+    /** Unmount the component (remove it from the DOM) when it is not shown. */
     unmountOnExit: PropTypes.bool,
-
-    /**
-     * Run the enter animation when the component mounts, if it is initially
-     * shown
-     */
-    transitionAppear: PropTypes.bool,
 
     /**
      * A Timeout for the animation, in milliseconds, to ensure that a node doesn't
@@ -52,9 +45,14 @@ export default class Transition extends React.Component {
      * setting this to the duration of your animation (or a bit above it).
      */
     timeout: PropTypes.object,
+
+    /** Run the enter animation when the component mounts, if it is initially shown. */
+    transitionAppear: PropTypes.bool,
   }
 
   static defaultProps = {
+    animation: 'fade',
+    duration: 500,
     in: false,
     unmountOnExit: true,
     transitionAppear: false,
@@ -95,13 +93,13 @@ export default class Transition extends React.Component {
     this.transitionTimeouts = []
   }
 
-  componentDidMount() {
-    this.updateStatus(true)
-  }
-
   // ----------------------------------------
   // Lifecycle
   // ----------------------------------------
+
+  componentDidMount() {
+    this.updateStatus(true)
+  }
 
   componentWillReceiveProps(nextProps) {
     const { status } = this.state
@@ -142,9 +140,6 @@ export default class Transition extends React.Component {
       const node = ReactDOM.findDOMNode(this)
 
       if (this.nextStatus === ENTERING) {
-        this.onTransitionItemEnd(node, TRANSITION_EXIT)
-        this.onTransitionItemStart(node, TRANSITION_ENTER)
-
         this.safeSetState({ status: ENTERING }, () => {
           let { timeout } = this.props
           if (typeof timeout !== 'number') {
@@ -153,15 +148,10 @@ export default class Transition extends React.Component {
           }
 
           this.onTransitionEnd(node, timeout, () => {
-            this.safeSetState({ status: ENTERED }, () => {
-              this.onTransitionItemEnd(node, TRANSITION_ENTER)
-            })
+            this.safeSetState({ status: ENTERED })
           })
         })
       } else {
-        this.onTransitionItemEnd(node, TRANSITION_ENTER)
-        this.onTransitionItemStart(node, TRANSITION_EXIT)
-
         this.safeSetState({ status: EXITING }, () => {
           let { timeout } = this.props
           if (typeof timeout !== 'number') {
@@ -169,9 +159,7 @@ export default class Transition extends React.Component {
           }
 
           this.onTransitionEnd(node, timeout, () => {
-            this.safeSetState({ status: EXITED }, () => {
-              this.onTransitionItemEnd(node, TRANSITION_EXIT)
-            })
+            this.safeSetState({ status: EXITED })
           })
         })
       }
@@ -193,6 +181,7 @@ export default class Transition extends React.Component {
     // This shouldn't be necessary, but there are weird race conditions with
     // setState callbacks and unmounting in testing, so always make sure that
     // we can cancel any pending setState callbacks after we unmount.
+    if(!callback) return this.setState(nextState)
     this.setState(nextState, this.setNextCallback(callback))
   }
 
@@ -227,60 +216,6 @@ export default class Transition extends React.Component {
     }
   }
 
-  onTransitionItemStart(node, animationType) {
-    const { className, activeClassName } = this.getClassNames(animationType)
-
-    _.forEach(className, cx => addClass(node, cx))
-    this.queueClassAndNode(activeClassName, node)
-  }
-
-  onTransitionItemEnd(node, animationType) {
-    const { className, activeClassName } = this.getClassNames(animationType)
-
-    _.forEach(className, cx => removeClass(node, cx))
-    _.forEach(activeClassName, cx => removeClass(node, cx))
-  }
-
-  getClassNames = type => {
-    const { classNames } = this.props
-
-    const className = type === TRANSITION_EXIT
-      ? ['transition', 'visible', 'animating', 'out', classNames]
-      : ['transition', 'visible', 'animating', 'in', classNames]
-
-    return {
-      className,
-      activeClassName: ['transition', 'visible'],
-    }
-  }
-
-  queueClassAndNode(className, node) {
-    this.classNameAndNodeQueue.push({
-      className,
-      node,
-    })
-
-    if (!this.rafHandle) {
-      this.rafHandle = raf(() => this.flushClassNameAndNodeQueue())
-    }
-  }
-
-  flushClassNameAndNodeQueue() {
-    if (!this.unmounted) {
-      this.classNameAndNodeQueue.forEach((obj) => {
-        // This is for to force a repaint,
-        // which is necessary in order to transition styles when adding a class name.
-        /* eslint-disable no-unused-expressions */
-        obj.node.scrollTop
-        /* eslint-enable no-unused-expressions */
-        _.forEach(obj.className, cx => addClass(obj.node, cx))
-      })
-    }
-
-    this.classNameAndNodeQueue.length = 0
-    this.rafHandle = null
-  }
-
   // ----------------------------------------
   // Helpers
   // ----------------------------------------
@@ -289,14 +224,15 @@ export default class Transition extends React.Component {
     const { status } = this.state
     if(status === UNMOUNTED) return null
 
-    const { children, className } = this.props
+    const { animation, children, className } = this.props
     const childClasses = _.get(children, 'props.className')
 
     return cx(
       childClasses,
-      useKeyOnly(ENTERING, 'in'),
-      useKeyOnly(EXITING, 'out'),
-      useKeyOnly(ENTERING || EXITING, 'animating transition visible'),
+      useKeyOnly(status === ENTERING, 'in'),
+      useKeyOnly(status === EXITING, 'out'),
+      useKeyOnly(status === ENTERING || status === EXITING, 'animating transition visible'),
+      useKeyOnly(status === ENTERING || status === EXITING, animation),
       className,
     )
   }
@@ -314,7 +250,6 @@ export default class Transition extends React.Component {
     const { status } = this.state
 
     if (status === UNMOUNTED) return null
-    return Children.only(children)
     return cloneElement(children, {
       className: this.computeClasses()
     })
