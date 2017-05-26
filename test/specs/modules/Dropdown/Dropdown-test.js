@@ -95,6 +95,7 @@ describe('Dropdown', () => {
   common.propKeyOnlyToClassName(Dropdown, 'selection')
   common.propKeyOnlyToClassName(Dropdown, 'simple')
   common.propKeyOnlyToClassName(Dropdown, 'scrolling')
+  common.propKeyOnlyToClassName(Dropdown, 'upward')
 
   common.propKeyOrValueAndKeyToClassName(Dropdown, 'pointing', [
     'left', 'right', 'top', 'top left', 'top right', 'bottom', 'bottom left', 'bottom right',
@@ -1601,6 +1602,19 @@ describe('Dropdown', () => {
         .simulate('change', { target: { value: faker.hacker.noun() } })
 
       dropdownMenuIsOpen()
+    })
+
+    it("Don't open the menu on change if query's length is less than minCharacters", () => {
+      wrapperMount(<Dropdown options={options} selection search minCharacters={4} />)
+
+      dropdownMenuIsClosed()
+
+      // simulate search with query's length is less than minCharacters
+      wrapper
+        .find('input.search')
+        .simulate('change', { target: { value: faker.hacker.noun().substring(0, 1) } })
+
+      dropdownMenuIsClosed()
     })
 
     it('does not call onChange on query change', () => {

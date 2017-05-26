@@ -54,10 +54,10 @@ export default class Search extends Component {
     minCharacters: PropTypes.number,
 
     /** Additional text for "No Results" message with less emphasis. */
-    noResultsDescription: PropTypes.string,
+    noResultsDescription: PropTypes.node,
 
     /** Message to display when there are no results. */
-    noResultsMessage: PropTypes.string,
+    noResultsMessage: PropTypes.node,
 
     /** Controls whether or not the results menu is displayed. */
     open: PropTypes.bool,
@@ -478,6 +478,7 @@ export default class Search extends Component {
     if (!isBrowser) return
     const menu = document.querySelector('.ui.search.active.visible .results.visible')
     const item = menu.querySelector('.result.active')
+    if (!item) return
     debug(`menu (results): ${menu}`)
     debug(`item (result): ${item}`)
     const isOutOfUpperView = item.offsetTop < menu.scrollTop

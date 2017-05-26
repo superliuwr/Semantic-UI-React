@@ -25,7 +25,7 @@ import Radio from '../../addons/Radio'
  * @see Input
  * @see Radio
  * @see Select
- * @see TextArea
+ * @see Visibility
  */
 function FormField(props) {
   const {
@@ -94,7 +94,9 @@ function FormField(props) {
 
   return (
     <ElementType className={classes}>
-      {createHTMLLabel(label)}
+      {createHTMLLabel(label, { defaultProps: {
+        htmlFor: _.get(controlProps, 'id') },
+      })}
       {createElement(control, controlProps)}
     </ElementType>
   )
