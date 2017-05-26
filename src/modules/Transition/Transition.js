@@ -42,15 +42,6 @@ export default class Transition extends Component {
     /** Show the component; triggers the enter or exit animation. */
     into: PropTypes.bool,
 
-    /**
-     * A Timeout for the animation, in milliseconds, to ensure that a node doesn't transition indefinately if the
-     * browser transitionEnd events are canceled or interrupted.
-     *
-     * By default this is set to a high number (5 seconds) as a failsafe. You should consider setting this to
-     * the duration of your animation (or a bit above it).
-     */
-    timeout: PropTypes.object,
-
     /** Run the enter animation when the component mounts, if it is initially shown. */
     transitionAppear: PropTypes.bool,
 
@@ -62,8 +53,8 @@ export default class Transition extends Component {
     animation: 'fade',
     duration: 500,
     into: false,
+    transitionAppear: true,
     unmountOnExit: true,
-    transitionAppear: false,
   }
 
   static _meta = {
@@ -86,27 +77,23 @@ export default class Transition extends Component {
   // ----------------------------------------
 
   componentDidMount() {
-    this.updateStatus(true)
+    debug('componentDidMount()')
+
+    this.updateStatus()
   }
 
   componentWillReceiveProps(nextProps) {
-    const { status } = this.state
+    debug('componentWillReceiveProps()')
 
-    if (nextProps.into) {
-      if (status === UNMOUNTED) {
-        this.setState({ status: EXITED })
-      }
-      if (status !== ENTERING && status !== ENTERED) {
-        this.nextStatus = ENTERING
-      }
-    } else {
-      if (status === ENTERING || status === ENTERED) {
-        this.nextStatus = EXITING
-      }
-    }
+    const { current: status, next } = this.computeStatuses(nextProps)
+
+    if (status) this.setState({ status })
+    if (next) this.nextStatus = next
   }
 
   componentDidUpdate() {
+    debug('componentDidUpdate()')
+
     this.updateStatus()
   }
 
@@ -116,7 +103,9 @@ export default class Transition extends Component {
     this.cancelNextCallback()
   }
 
-  updateStatus(mounting = false) {
+  updateStatus() {
+    const { duration } = this.props
+
     if (this.nextStatus !== null) {
       // nextStatus will always be ENTERING or EXITING.
       this.cancelNextCallback()
@@ -124,24 +113,13 @@ export default class Transition extends Component {
 
       if (this.nextStatus === ENTERING) {
         this.safeSetState({ status: ENTERING }, () => {
-          let { timeout } = this.props
-          if (typeof timeout !== 'number') {
-            timeout = mounting && timeout.appear != null ?
-              timeout.appear : timeout.enter
-          }
-
-          this.onTransitionEnd(node, timeout, () => {
+          this.onTransitionEnd(node, duration, () => {
             this.safeSetState({ status: ENTERED })
           })
         })
       } else {
         this.safeSetState({ status: EXITING }, () => {
-          let { timeout } = this.props
-          if (typeof timeout !== 'number') {
-            timeout = timeout.exit
-          }
-
-          this.onTransitionEnd(node, timeout, () => {
+          this.onTransitionEnd(node, duration, () => {
             this.safeSetState({ status: EXITED })
           })
         })
@@ -186,13 +164,13 @@ export default class Transition extends Component {
     return this.nextCallback
   }
 
-  onTransitionEnd(node, timeout, handler) {
+  onTransitionEnd(node, duration, handler) {
     this.setNextCallback(handler)
 
-    if (timeout == null) {
+    if (!duration) {
       this.nextCallback()
     } else if (node) {
-      setTimeout(this.nextCallback, timeout)
+      setTimeout(this.nextCallback, duration)
     } else {
       setTimeout(this.nextCallback, 0)
     }
@@ -236,6 +214,29 @@ export default class Transition extends Component {
     return { initial: EXITED }
   }
 
+  computeStatuses = props => {
+    const { status } = this.state
+    const { into } = props
+
+    if (into) {
+      return {
+        current: status === UNMOUNTED && EXITED,
+        next: (status !== ENTERING && status !== ENTERED) && ENTERING,
+      }
+    }
+
+    return {
+      next: (status === ENTERING || status === ENTERED) && EXITING,
+    }
+  }
+
+  computeStyle = () => {
+    const { children, duration } = this.props
+    const childStyle = _.get(children, 'props.style')
+
+    return { ...childStyle, animationDuration: `${duration}ms` }
+  }
+
   // ----------------------------------------
   // Render
   // ----------------------------------------
@@ -251,6 +252,7 @@ export default class Transition extends Component {
     if (status === UNMOUNTED) return null
     return cloneElement(children, {
       className: this.computeClasses(),
+      style: this.computeStyle(),
     })
   }
 }

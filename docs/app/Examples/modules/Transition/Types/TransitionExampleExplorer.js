@@ -42,9 +42,9 @@ export default class TransitionExampleExplorer extends Component {
         </Grid.Column>
 
         <Grid.Column>
-          <Transition.Group timeout={1500}>
+          <Transition.Group duration={1500}>
             { visible && (
-              <Transition classNames='fade' timeout={1500}>
+              <Transition duration={1500}>
                 <Image
                   size='medium'
                   src='http://semantic-ui.com/images/leaves/1.png'

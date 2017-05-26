@@ -5,17 +5,11 @@ import React, { cloneElement, isValidElement } from 'react'
 import { getUnhandledProps, META } from '../../lib'
 import { getChildMapping, mergeChildMappings } from '../../lib/ChildMapping'
 
-function normalizeTimeout(timeout) {
-  if (typeof timeout === 'number') return timeout
-  // transitions are always "appearing" in the context of a TransitionGroup
-  return { ...timeout, appear: timeout.enter }
-}
-
 export default class TransitionGroup extends React.Component {
   static propTypes = {
     component: PropTypes.any,
     children: PropTypes.node,
-    timeout: PropTypes.any,
+    duration: PropTypes.any,
   }
 
   static defaultProps = {
@@ -30,12 +24,11 @@ export default class TransitionGroup extends React.Component {
   constructor(props, context) {
     super(props, context)
 
-    const { children, timeout } = props
+    const { children, duration } = props
     const mapping = getChildMapping(children, child => {
       return cloneElement(child, {
-        timeout,
+        duration,
         into: true,
-        transitionAppear: timeout.appear !== null,
         onExited: () => this.handleExited(child.key),
       })
     })
@@ -55,7 +48,7 @@ export default class TransitionGroup extends React.Component {
       if (!isValidElement(child)) return
 
       const onExited = () => this.handleExited(key)
-      const timeout = this.props.timeout
+      const duration = this.props.duration
 
       const hasPrev = key in prevChildMapping
       const hasNext = key in nextChildMapping
@@ -70,13 +63,13 @@ export default class TransitionGroup extends React.Component {
           onExited,
           into: true,
           transitionAppear: true,
-          timeout: normalizeTimeout(timeout),
+          duration,
         })
       }
       // item is old (exiting)
       else if (!hasNext && hasPrev && !isLeaving) {
         // console.log('leaving', key)
-        children[key] = cloneElement(child, { into: false, timeout })
+        children[key] = cloneElement(child, { into: false, duration })
       }
       // item hasn't changed transition states
       // copy over the last transition props;
