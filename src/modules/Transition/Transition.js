@@ -2,7 +2,6 @@ import cx from 'classnames'
 import _ from 'lodash'
 import PropTypes from 'prop-types'
 import { cloneElement, Component } from 'react'
-import ReactDOM from 'react-dom'
 
 import {
   makeDebugger,
@@ -13,11 +12,11 @@ import TransitionGroup from './TransitionGroup'
 
 const debug = makeDebugger('Transition')
 
-export const UNMOUNTED = 'UNMOUNTED'
-export const EXITED = 'EXITED'
-export const ENTERING = 'ENTERING'
-export const ENTERED = 'ENTERED'
-export const EXITING = 'EXITING'
+const ENTERED = 'ENTERED'
+const ENTERING = 'ENTERING'
+const EXITED = 'EXITED'
+const EXITING = 'EXITING'
+const UNMOUNTED = 'UNMOUNTED'
 
 /**
  * A transition is an animation usually used to move content in or out of view.
@@ -25,6 +24,7 @@ export const EXITING = 'EXITING'
 export default class Transition extends Component {
   static propTypes = {
     /** Named animation event to used. Must be defined in CSS. */
+    /* TODO: define animations */
     animation: PropTypes.string,
 
     /** Primary content. */
@@ -103,56 +103,31 @@ export default class Transition extends Component {
     this.cancelNextCallback()
   }
 
-  updateStatus() {
-    const { duration } = this.props
+  // ----------------------------------------
+  // Callback handling
+  // ----------------------------------------
 
-    if (this.nextStatus !== null) {
-      // nextStatus will always be ENTERING or EXITING.
-      this.cancelNextCallback()
-      const node = ReactDOM.findDOMNode(this)
-
-      if (this.nextStatus === ENTERING) {
-        this.safeSetState({ status: ENTERING }, () => {
-          this.onTransitionEnd(node, duration, () => {
-            this.safeSetState({ status: ENTERED })
-          })
-        })
-      } else {
-        this.safeSetState({ status: EXITING }, () => {
-          this.onTransitionEnd(node, duration, () => {
-            this.safeSetState({ status: EXITED })
-          })
-        })
-      }
-
-      this.nextStatus = null
-    } else if (this.props.unmountOnExit && this.state.status === EXITED) {
-      this.setState({ status: UNMOUNTED })
-    }
-  }
-
-  cancelNextCallback() {
+  cancelNextCallback = () => {
     if (!this.nextCallback) return
 
     this.nextCallback.cancel()
     this.nextCallback = null
   }
 
-  safeSetState(nextState, callback) {
-    // This shouldn't be necessary, but there are weird race conditions with
-    // setState callbacks and unmounting in testing, so always make sure that
-    // we can cancel any pending setState callbacks after we unmount.
-    this.setState(nextState, callback && this.setNextCallback(callback))
+  onTransitionEnd = (duration, handler) => {
+    this.setNextCallback(handler)
+
+    if (!duration) return this.nextCallback()
+    return setTimeout(this.nextCallback, duration)
   }
 
-  setNextCallback(callback) {
+  setNextCallback = callback => {
     let active = true
 
     this.nextCallback = (event) => {
       if (active) {
         active = false
         this.nextCallback = null
-
         callback(event)
       }
     }
@@ -164,17 +139,29 @@ export default class Transition extends Component {
     return this.nextCallback
   }
 
-  onTransitionEnd(node, duration, handler) {
-    this.setNextCallback(handler)
+  updateStatus = () => {
+    const { duration, unmountOnExit } = this.props
+    const { status: current } = this.state
 
-    if (!duration) {
-      this.nextCallback()
-    } else if (node) {
-      setTimeout(this.nextCallback, duration)
-    } else {
-      setTimeout(this.nextCallback, 0)
+    if (this.nextStatus) {
+      // nextStatus will always be ENTERING or EXITING.
+      this.cancelNextCallback()
+
+      const status = this.nextStatus === ENTERING ? ENTERING : EXITING
+      const callback = this.nextStatus === ENTERING ? this.setEntered : this.setExited
+
+      this.nextStatus = null
+      this.setState({ status }, () => this.onTransitionEnd(duration, callback))
+
+      return
     }
+
+    if (current === EXITED && unmountOnExit) this.setState({ status: UNMOUNTED })
   }
+
+  setEntered = () => this.setState({ status: ENTERED })
+
+  setExited = () => this.setState({ status: EXITED })
 
   // ----------------------------------------
   // Helpers

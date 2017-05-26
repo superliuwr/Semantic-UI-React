@@ -45,11 +45,7 @@ export default class TransitionExampleExplorer extends Component {
           <Transition.Group duration={1500}>
             { visible && (
               <Transition duration={1500}>
-                <Image
-                  size='medium'
-                  src='http://semantic-ui.com/images/leaves/1.png'
-                  style={{ animationDuration: '1.5s' }}
-                />
+                <Image size='medium' src='http://semantic-ui.com/images/leaves/1.png' />
               </Transition>
             )}
           </Transition.Group>
