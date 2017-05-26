@@ -6,17 +6,18 @@ import { cloneElement, Component } from 'react'
 import {
   makeDebugger,
   META,
+  SUI,
   useKeyOnly,
 } from '../../lib'
 import TransitionGroup from './TransitionGroup'
 
 const debug = makeDebugger('Transition')
 
-const ENTERED = 'ENTERED'
-const ENTERING = 'ENTERING'
-const EXITED = 'EXITED'
-const EXITING = 'EXITING'
-const UNMOUNTED = 'UNMOUNTED'
+export const ENTERED = 'ENTERED'
+export const ENTERING = 'ENTERING'
+export const EXITED = 'EXITED'
+export const EXITING = 'EXITING'
+export const UNMOUNTED = 'UNMOUNTED'
 
 /**
  * A transition is an animation usually used to move content in or out of view.
@@ -24,23 +25,51 @@ const UNMOUNTED = 'UNMOUNTED'
 export default class Transition extends Component {
   static propTypes = {
     /** Named animation event to used. Must be defined in CSS. */
-    /* TODO: define animations */
-    animation: PropTypes.string,
+    animation: PropTypes.oneOf(SUI.TRANSITION),
 
     /** Primary content. */
     children: PropTypes.node,
 
-    /** Additional classes. */
-    className: PropTypes.string,
-
     /** Duration of the CSS transition animation in microseconds. */
     duration: PropTypes.number,
+
+    /** Show the component; triggers the enter or exit animation. */
+    into: PropTypes.bool,
 
     /** Wait until the first "enter" transition to mount the component (add it to the DOM). */
     mountOnEnter: PropTypes.bool,
 
-    /** Show the component; triggers the enter or exit animation. */
-    into: PropTypes.bool,
+    /**
+     * Callback on each transition that changes visibility to shown.
+     *
+     * @param {null}
+     * @param {object} data - All props with status.
+     */
+    onComplete: PropTypes.func,
+
+    /**
+     * Callback on each transition that changes visibility to hidden.
+     *
+     * @param {null}
+     * @param {object} data - All props with status.
+     */
+    onHide: PropTypes.func,
+
+    /**
+     * Callback on each transition that changes visibility to shown.
+     *
+     * @param {null}
+     * @param {object} data - All props with status.
+     */
+    onShow: PropTypes.func,
+
+    /**
+     * Callback on each transition complete.
+     *
+     * @param {null}
+     * @param {object} data - All props with status.
+     */
+    onStart: PropTypes.func,
 
     /** Run the enter animation when the component mounts, if it is initially shown. */
     transitionAppear: PropTypes.bool,
@@ -52,7 +81,7 @@ export default class Transition extends Component {
   static defaultProps = {
     animation: 'fade',
     duration: 500,
-    into: false,
+    into: true,
     transitionAppear: true,
     unmountOnExit: true,
   }
@@ -159,9 +188,19 @@ export default class Transition extends Component {
     if (current === EXITED && unmountOnExit) this.setState({ status: UNMOUNTED })
   }
 
-  setEntered = () => this.setState({ status: ENTERED })
+  setEntered = () => {
+    const status = ENTERED
 
-  setExited = () => this.setState({ status: EXITED })
+    this.setState({ status })
+    _.invoke(this.props, 'onShow', null, { ...this.props, status })
+  }
+
+  setExited = () => {
+    const status = EXITED
+
+    this.setState({ status })
+    _.invoke(this.props, 'onHide', null, { ...this.props, status })
+  }
 
   // ----------------------------------------
   // Helpers
@@ -171,7 +210,7 @@ export default class Transition extends Component {
     const { status } = this.state
     if (status === UNMOUNTED) return null
 
-    const { animation, children, className } = this.props
+    const { animation, children } = this.props
     const childClasses = _.get(children, 'props.className')
 
     return cx(
@@ -180,12 +219,16 @@ export default class Transition extends Component {
       useKeyOnly(status === EXITING, 'out'),
       useKeyOnly(status === ENTERING || status === EXITING, 'animating transition visible'),
       useKeyOnly(status === ENTERING || status === EXITING, animation),
-      className,
     )
   }
 
   computeInitialStatuses = () => {
-    const { into, mountOnEnter, transitionAppear, unmountOnExit } = this.props
+    const {
+      into,
+      mountOnEnter,
+      transitionAppear,
+      unmountOnExit,
+    } = this.props
 
     if (into) {
       if (transitionAppear) {
